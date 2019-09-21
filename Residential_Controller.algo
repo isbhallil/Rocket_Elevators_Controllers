@@ -89,7 +89,7 @@ SEQUENCE getStepsToTravel USING elevator, request RETURNING steps
     IF numberOfTasks > 0
         FOR EACH task in elevator tasksList
             IF CALL isTaskReachingMe WITH task, request RETURNING boolean THEN 
-                RETURN steps + CALL getAbsoluteDifference WITH request floor, task origin
+                RETURN stepsToCome + CALL getAbsoluteDifference WITH request floor, task origin
             ELSE
                 SET currentSteps EQUAL CALL getAbsoluteDifference WITH task.floor, elevator.currentFloor
                 SET stepsToCome EQUAL steps + currentSteps
@@ -118,6 +118,8 @@ SEQUENCE isTaskReachingMe USING task, request RETURNING boolean
                 END IF
         END CASE
     END IF
+
+    RETURN false
 END SEQUENCE
 
 
@@ -429,7 +431,7 @@ SEQUENCE addRequestToTasksList
         isFull TO COMPUTE getSecurityCheck
     }
 
-    SET isActive TO true
+    CALL buttonLightOn
     CALL dispatchRequest USING request
 END SEQUENCE
 

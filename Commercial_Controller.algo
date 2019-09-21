@@ -168,13 +168,15 @@ END SEQUENCE
 
 SEQUENCE isBeneath USING origin, target RETURNING boolean
     IF target < origin THEN 
-    RETURN true, CALL getAbsoluteDifference WITH target, origin
+        RETURN true, CALL getAbsoluteDifference WITH target, origin
+    END IF
 END SEQUENCE
 
 
 SEQUENCE isAbove USING origin, target RETURNING boolean
     IF target > origin THEN
         RETURN true, CALL getAbsoluteDifference WITH target, origin
+    END IF
 END SEQUENCE
 
 
@@ -186,6 +188,7 @@ END SEQUENCE
 SEQUENCE dispatchRequest USING elevator, request
     CALL elevator.addTask WITH request
 END SEQUENCE
+
 
 SEQUENCE getMaxFloorRange
     RETURN maxFloorRange
@@ -343,7 +346,21 @@ END SEQUENCE
     END SEQUENCE
 
     SEQUENCE operateToOrigin
-        
+        SET toOrigin EQUAL getAbsoluteDifference WITH origin, COMPUTE READ first task oh taskaLkst as task floor
+        CALL goTo WITH origin
+    END SEQUENCE
+
+    SEQUENCE goTo USING target
+        IF target > currentFloor THEN
+            REPEAT
+                operateMoveUp
+            UNTIL currentFloor IS target
+            n    
+        ELSE IF currentFloor > target
+            REPEAT
+                operateMoveDown
+            UNTIL currentFloor IS target
+        END IF
     END SEQUENCE
         
     SEQUENCE getNextFloor RETURNING nextFloor, steps
