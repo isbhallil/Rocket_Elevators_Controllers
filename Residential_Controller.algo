@@ -425,7 +425,7 @@ SEQUENCE addRequestToTasksList
     }
 
     SET isActive TO true
-    CALL assignElevator USING request
+    CALL dispatchRequest USING request
 END SEQUENCE
 
 SEQUENCE buttonLightOn

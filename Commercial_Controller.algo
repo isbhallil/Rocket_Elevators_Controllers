@@ -1,0 +1,549 @@
+ ************************************************************************
+
+                              BATTERY 
+
+***********************************************************************
+
+
+:> columnslist = [
+    :> column
+]
+
+SEQUENCE getInstant
+    RETURN COMPUTE timestamp
+END SEQUENCE
+
+
+************************************************************************
+
+                              COLUMN 
+
+***********************************************************************
+
+INIT Column1 EQUAL COMPUTE ADD DESCRIPTION maxFloorRange EQUAL 19, minFloorRange EQUAL 0
+INIT Column2 EQUAL COMPUTE ADD DESCRIPTION maxFloorRange EQUAL 39, minFloorRange EQUAL 20
+INIT Column3 EQUAL COMPUTE ADD DESCRIPTION maxFloorRange EQUAL 59, minFloorRange EQUAL 40
+INIT Column4 EQUAL COMPUTE ADD DESCRIPTION maxFloorRange EQUAL 0, minFloorRange EQUAL -6
+
+- column = {
+    :> columnID
+    :> maxFloorRange
+    :> minFloorRange
+    :> getMaxFloorRange()
+    :> floorsList = [
+        :> floor 
+    ]
+    :> elevatorsList
+          = [
+          :> elevator
+    ]
+    :> requestsHistoryList = [
+        :> request = {
+            createdAt
+            ArrivedAt
+            floor
+            direction
+            column
+            isFull
+        }
+    ] 
+    :> addRequestTohistory() using request
+    :> calcBestOrigin() // calcule des medianes des etages d appels ideal
+    :> setBestOrigin() using elevator
+    :> getInstant()
+    :> findBestElevator() USING request
+    :> getBestElevator() USING request
+    :> getBestFrom() USING elevator, request
+    :> getStepsToTravel() USING elevator, request
+    :> dispatchRequest() USING request, elevator
+
+}
+
+
+SEQUENCE findBestElevator USING request RETURNING elevator
+    SET bestElevator EQUAL CALL getBestElevator WITH request RETURNING elevator
+    CALL dispatchRequest USING bestElevator, request
+    RETURN BestElevator
+END SEQUENCE
+
+
+SEQUENCE getBestElevator USING request RETURNING elevator
+    SET idleElevators EQUAL empty list
+    SET commingElevators EQUAL empty list
+    SET othersElevators EQUAL empty list
+
+    SET bestElevator EQUAL empty
+    SET minimumStepsToTravel EQUAL empty
+
+    SET requestedFloor EQUAL request floor
+    SET neededColumn EQUAL "empty"
+
+    FOR EACH column OF columnslist
+        IF requestedFloor >= column minFloorRange AND requestedFloor <= column maxFloorRange
+            SET neededColumn EQUAL column
+        THEN
+    END FOR EACH
+
+    FOR EACH elevator IN neededColumn
+        CASE elevator
+            state IS 'idle' :
+                ADD elevator TO idleElevators
+            
+            state IS 'moving'
+                IF CALL isElevatorComing WITH elevator RETURNING boolean
+                    THEN ADD elevator TO commingElevators
+                ELSE ADD elevator TO othersElevators
+            OTHERS
+                ADD elevator TO othersElevators
+        ENDCASE
+    END FOR EACH
+
+
+    FOR EACH elevatorsList IN lIST WITH commingElevators, idleElevators, othersElevators
+        IF CALL getBestFrom WITH elevatorsList, request RETURNING elevator THEN
+            RETURN BestElevator
+        ENDIF
+    END FOR EACH
+END SEQUENCE
+
+
+SEQUENCE getBestFrom USING elevatorsList, request RETURNING elevator
+    SET bestElevator EQUAL empty
+    SET bestTravelSteps EQUAL empty
+
+    FOR EACH elevator IN elevatorsList
+        SET elevatorTravelSteps EQUAL CALL getStepsToTravel with elevator, request RETURNING steps
+
+        IF (bestTravelSteps IS empty OR elevatorTravelSteps < bestTravelSteps) AND elevator.isSafe IS true
+        THEN 
+            SET BestElevator EQUAL elevator
+            SET bestTravelSteps EQUAL elevatorTravelSteps
+        END IF
+    END FOR EACH
+
+    RETURN bestElevator
+END SEQUENCE
+
+
+SEQUENCE getStepsToTravel USING elevator, request RETURNING steps
+    SET stepsToCome EQUAL 0
+    SET currentTask EQUAL elevator.currentFloor
+         
+    SET numberOfTasks EQUAL COMPUTE number of tasks in elevator tasksList
+
+    IF numberOfTasks > 0
+        FOR EACH task in elevator tasksList
+            IF CALL isTaskReachingMe WITH task, request RETURNING boolean THEN 
+                RETURN steps + CALL getAbsoluteDifference WITH request floor, task origin
+            ELSE
+                SET currentSteps EQUAL CALL getAbsoluteDifference WITH task.floor, elevator.currentFloor
+                SET stepsToCome EQUAL steps + currentSteps
+            END IF
+        END FOR
+
+        RETURN stepsToCome + CALL getAbsoluteDifference WITH request.targetFloor, lastTask.floor
+    ELSE 
+        RETURN CALL getAbsoluteDifference WITH  request.floor, elevator.currentFloor
+    END IF
+END SEQUENCE
+
+
+SEQUENCE isTaskReachingMe USING task, request RETURNING boolean
+    IF task.direction EQUAL request.direction
+        CASE task.direction
+            up :
+            THEN 
+                IF CALL isAbove WITH elevator currentFloor, request floor AND CALL isBeneath WITH task floor, request.floor
+                    RETURN true
+                END IF
+            down:
+            THEN
+                IF CALL isBeneath WITH elevator.currentFloor, request.floor AND CALL isAbove WITH task.floor, request.floor
+                    RETURN true
+                END IF
+        END CASE
+    END IF
+END SEQUENCE
+
+
+SEQUENCE isBeneath USING origin, target RETURNING boolean
+    IF target < origin THEN 
+    RETURN true, CALL getAbsoluteDifference WITH target, origin
+END SEQUENCE
+
+
+SEQUENCE isAbove USING origin, target RETURNING boolean
+    IF target > origin THEN
+        RETURN true, CALL getAbsoluteDifference WITH target, origin
+END SEQUENCE
+
+
+SEQUENCE getAbsoluteDifference USING target, origin RETURNING difference
+    RETURN COMPUTE ABSOLUTE( target - origin )
+END SEQUENCE
+
+
+SEQUENCE dispatchRequest USING elevator, request
+    CALL elevator.addTask WITH request
+END SEQUENCE
+
+SEQUENCE getMaxFloorRange
+    RETURN maxFloorRange
+END SEQUENCE
+
+
+SEQUENCE setOrigin USING elevator
+    SET time EQUAL CALL battery getinstant
+
+    IF time < 10a.m. THEN 
+        CALL elevator setOrigin WITH 'street'
+    ELSE IF (time > 11:30 a.m AND time < 1:30 p.m.) OR (time > 3:30 p.m AND time < 6:30 p.m.)  THEN
+        CALL elevator setOrigin WITH 'top'
+    ELSE  
+        CALL elevator setOrigin WITH 'none'
+END SEQUENCE
+
+
+************************************************************************
+
+                              FLOOR 
+
+***********************************************************************
+
+:> floor = {
+    :> number
+    :> screen
+    :> elevatorsCurrentFloorList
+    :> buttonsList = [
+        :> floorButton 
+    ]
+}
+:> showElevatorStatus() using column elevatorsList
+
+SEQUENCE showElevatorStatus USING column elevatorsList
+    SET screen EQUAL empty
+
+    FOR EACH elevator in elevatorsList
+    DO
+        SET elevatorState EQUAL "elevator: " + id + " is " + elevator.state + "| floor: " +  elevator.currentFloor 
+        COMPUTE screen EQUAL screen + elevatorState
+    END FOR EACH
+END SEQUENCE
+
+************************************************************************
+
+                              FLOOR_BUTTON 
+
+***********************************************************************
+
+:> floorButton = {
+    :> direction
+    :> isActive
+    :> buttonLightOn() 
+    :> buttonLightOff() 
+    :> callElevator()
+
+
+    SEQUENCE buttonLightOn
+        SET isActive TO true
+    END SEQUENCE
+
+
+    SEQUENCE buttonLightOff
+        SET isActive TO false
+    END SEQUENCE
+
+
+    SEQUENCE callElevator
+        SET request EQUAL {
+            targetFloor TO floor number, 
+            originFloor TO empty
+            direction TO down
+            createdAt TO battery CALL getInstant
+            arriveddAt TO empty
+            column TO columnID
+        }
+
+        SET isActive TO true
+        CALL findBestElevator USING request
+    END SEQUENCE 
+}
+
+************************************************************************
+
+                              ELEVATOR 
+
+************************************************************************
+
+
+:> elevator = {
+    :> id  
+    :> state i.e. 'idle', 'moving'                                                            
+    :> currentFloor
+    :> doorState i.e. 'closed', 'opened', 'closing', 'opening'
+    :> elevatorLights i.e. true, false
+    :> weight                                                 
+    :> maxWeight
+    :> origin
+    :> isSafe i.e. true , false
+    :> buttonsList = [
+        :> elevatorButton
+    ]
+    :> tasksList = [
+        :> task = {
+            floor
+            createdAt
+            arrivedAt
+            column
+        }
+    ]
+    :> toggleLight()
+    :> isSafeWeight()
+    :> playSound()
+    :> mute()
+    :> addTask() using request
+    :> updateTasksList() 
+    :> isOnTaskFloor() using task
+    :> goToOrigin()
+    :> moveElevator() 
+    :> updateCurrentFloor()
+    :> setOrigin() using position
+    :> operate()
+
+
+    SEQUENCE operate
+        REPEAT 
+            SET nextFloor, steps EQUAL CALL getNextFloor
+            
+            IF steps > 0 
+                THEN CALL operateMoveUp
+            ELSE IF steps < 0 
+                THEN CALL operateMoveDown
+            ELSE IF nextFloor 
+                CALL operateSameFloor
+            ELSE operateToOrigin
+            END IF
+        UNTIL isTasks 
+
+        CALL toggleLight
+        CALL column showElevatorStatus
+    END SEQUENCE
+
+    SEQUENCE operateMoveUp
+        SET currentFloor EQUAL currentFloor + 1
+    END SEQUENCE
+
+    SEQUENCE operateMoveDown
+        SET currentFloor EQUAL currentFloor - 1
+    END SEQUENCE
+
+    SEQUENCE operateSameFloor
+        CALL openDoor
+        CALL buttonlight    
+    END SEQUENCE
+
+    SEQUENCE operateToOrigin
+        
+    END SEQUENCE
+        
+    SEQUENCE getNextFloor RETURNING nextFloor, steps
+        SET nextFloor EQUAL READ first task as task currentFloor
+        SET steps EQUAL currentFloor - nextFloor
+
+        RETURN DESCRIPTION as nextFloor, steps
+    END SEQUENCE
+
+    SEQUENCE buttonLight USING currentFloor, direction RETURNING button
+        FOR EACH button of buttonsList
+        DO
+            IF button desiredFloorNumber IS currentFloor
+            THEN 
+                CALL button buttonLightOff
+        END FOR EACH
+
+        FOR EACH floor OF column
+            IF floor is currentFloor
+            THEN
+                FOR EACH button of buttonsList 
+                DO 
+                    IF button direction IS direction 
+                    THEN CALL button buttonLightOff 
+                END FOR EACH
+            END IF
+        END FOR EACH
+    END SEQUENCE
+
+    SEQUENCE getNextTask
+        RETURN COMPUTE first task of tasksList
+    END SEQUENCE
+
+    SEQUENCE isSafeWeight
+        RETURN COMPUTE weight <= maxWeight 
+    END SEQUENCE
+
+    SEQUENCE playSound
+        COMPUTE play sound
+    END SEQUENCE
+  
+    SEQUENCE mute
+        COMPUTE stop sound
+    END SEQUENCE
+
+    SEQUENCE isLifting
+        if weight IS 0 AND door state IS closed 
+        THEN CALL turnElevatorLightoFF
+        ELSE turnElevatorLightOn
+    END SEQUENCE
+
+    SEQUENCE turnElevatorLightOn
+        SET elevatorLights EQUAL true
+    END SEQUENCE
+
+    SEQUENCE turnElevatorLightoFF
+        SET elevatorLights EQUAL false
+    END SEQUENCE
+
+    SEQUENCE addTask USING request
+        COMPUTE ADD request to TasksList
+        COMPUTE SORT TasksList
+        CALL operate
+    END SEQUENCE
+
+    SEQUENCE isTasks RETURNING boolean
+        RETURN COMPUTE tasksList IS True
+    END SEQUENCE
+
+    SEQUENCE updateTasksList
+        FOR EACH task OF tasksList DO 
+            IF CALL isElevatorOnTaskFloor WITH task IS true THEN 
+                ADD DESCRIPTION TO task as { arrivedAt: CALL getInstant}
+                ADD task to column requestsHistoryList task
+                COMPUTE DELETE task from tasksList
+            
+            ELSE IF CALL isElevatorOnCallFloor with task is true THEN 
+                COMPUTE DELETE task from TasksList
+            END IF
+        END FOR
+    END SEQUENCE
+
+    SEQUENCE isElevatorOnTaskFloor USING task RETURNING boolean
+        RETURN currentFloor IS EQUAL TO task.floor
+    END SEQUENCE
+
+    SEQUENCE moveElevator
+        CALL closeDoor
+
+        IF currentFloor > CALL getNextFloor THEN 
+            SET currentFloor EQUAL currentFloor + 1
+        ELSE IF currentFloor < getNextFloor THEN 
+            SET currentFloor EQUAL currentFloor - 1
+        ELSE
+            CALL landOnFloor
+        END IF
+    END SEQUENCE
+
+    SEQUENCE setOrigin USING position
+        IF poistion IS 'top'
+            THEN SET origin EQUAL CALL column getMaxFloorRange
+        ELSE IF poistion is 'street'
+            THEN SET origin EQUAL 1
+        ELSE 
+            origin equal empty 
+        END IF
+    END SEQUENCE
+
+}
+
+
+************************************************************************
+
+                            ELAVATOR_PAD 
+
+***********************************************************************
+
+:> elevatorButton = {
+    :> isActive
+    :> screen
+    :> desiredFloorNumber
+    :> addRequestToRequestList()
+    :> buttonLightOn() 
+    :> buttonLightOff() 
+}
+
+SEQUENCE addRequestToTasksList 
+    SET screen EQUAL empty
+
+    SET request EQUAL {
+        createdAt TO CALL getInstant
+        ArrivedAt TO empty
+        originFloor TO 
+        targetfloor TO desiredFloorNumber
+        column TO column columnID
+        isFull TO COMPUTE getSecurityCheck
+    }
+
+    SET isActive TO true
+    SET bestElevator EQUAL CALL findBestElevator USING request RETURNING bestElevator
+
+    SET screen  EQUAL "elevator: " + id + " is " + elevator.state + "| floor: " +  elevator.currentFloor 
+END SEQUENCE
+
+SEQUENCE buttonLightOn
+    SET isActive EQUAL true
+END SEQUENCE
+
+SEQUENCE buttonLightOff
+    SET isActive EQUAL false
+END SEQUENCE
+
+
+************************************************************************
+
+                              ELAVATOR_DOOR 
+
+***********************************************************************
+
+:> door = {
+    :> state i.e. open, closed, opening, closing, obstructed
+    :> securitySensors i.e. false if security is not met
+    :> openDoor()
+    :> isOpeningSafe()
+    :> closeDoor()
+    :> isClosingSafe()
+}
+
+
+SEQUENCE openDoor
+    IF CALL isOpeningSafe IS true AND elevator state IS idle
+    THEN 
+        COMPUTE open door 3seconds 
+        SET state TO open
+        COMPUTE 5sec THEN CALL closeDoor
+END SEQUENCE
+
+
+SEQUENCE isOpeningSafe RETURNING boolean
+    RETURN CALL securitySensors
+END SEQUENCE
+
+
+SEQUENCE closeDoor
+    IF CALL isClosingSafe IS false
+        THEN 
+            CALL playSound
+            CALL openDoor
+    ELSE
+        THEN CALL mute
+        SET state TO closed
+    END IF
+
+    CALL elevator operate
+    CALL elevator updateTasksList
+END SEQUENCE
+
+
+SEQUENCE isClosingSafe RETURNING boolean
+    IF securitySensors IS true AND CALL isSafeWeight AND elevator state IS idle
+        THEN RETURN true
+    ELSE RETURN false
+END SEQUENCE
