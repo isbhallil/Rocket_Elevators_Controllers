@@ -407,9 +407,10 @@ END SEQUENCE
     END SEQUENCE
 
     SEQUENCE isLifting
-        if weight IS 0 AND door state IS closed 
-        THEN CALL turnElevatorLightoFF
+        IF weight IS 0 AND door state IS closed 
+            THEN CALL turnElevatorLightoFF
         ELSE turnElevatorLightOn
+        END IF
     END SEQUENCE
 
     SEQUENCE turnElevatorLightOn
@@ -427,7 +428,7 @@ END SEQUENCE
     END SEQUENCE
 
     SEQUENCE isTasks RETURNING boolean
-        RETURN COMPUTE tasksList IS True
+        RETURN COMPUTE tasksList IS NOT empty
     END SEQUENCE
 
     SEQUENCE updateTasksList
@@ -536,6 +537,7 @@ SEQUENCE openDoor
         COMPUTE open door 3seconds 
         SET state TO open
         COMPUTE 5sec THEN CALL closeDoor
+    END IF
 END SEQUENCE
 
 
@@ -563,4 +565,5 @@ SEQUENCE isClosingSafe RETURNING boolean
     IF securitySensors IS true AND CALL isSafeWeight AND elevator state IS idle
         THEN RETURN true
     ELSE RETURN false
+    END IF
 END SEQUENCE
