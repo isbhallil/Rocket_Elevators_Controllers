@@ -25,7 +25,7 @@ END SEQUENCE
 SEQUENCE findBestElevator USING request
     SET bestElevator EQUAL CALL getBestElevator WITH request RETURNING elevator
     CALL dispatchRequest USING bestElevator, request
-END SEQUENCE
+END SEQUENCE 
 
 
 SEQUENCE getBestElevator USING request RETURNING elevator
@@ -44,7 +44,7 @@ SEQUENCE getBestElevator USING request RETURNING elevator
                     ADD elevator TO idleElevators
                 
                 state IS 'moving'
-                    IF CALL isElevatorComing WITH elevator RETURNING boolean
+                    IF CALL isElevatorComing WITH elevato, request RETURNING boolean
                         THEN ADD elevator TO commingElevators
                     ELSE ADD elevator TO othersElevators
                 OTHERS
@@ -130,6 +130,11 @@ END SEQUENCE
 SEQUENCE isAbove USING origin, target RETURNING boolean
     IF target > origin THEN
         RETURN true, CALL getAbsoluteDifference WITH target, origin
+END SEQUENCE
+
+SEQUENCE isElevatorComing using elevator, request
+    SET firstTask EQUAL READ first element of elevator tasksList
+    RETURN firstTask direction IS request direction
 END SEQUENCE
 
 
