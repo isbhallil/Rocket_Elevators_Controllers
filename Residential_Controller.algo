@@ -40,7 +40,7 @@ SEQUENCE getBestElevator USING request RETURNING elevator
     FOR EACH column in battery columnslist
         FOR EACH elevator IN column
             CASE elevator
-                state IS 'idle' :
+                state IS 'idle'  :
                     ADD elevator TO idleElevators
                 
                 state IS 'moving'
@@ -305,7 +305,7 @@ END SEQUENCE
 
     SEQUENCE operateSameFloor
         CALL openDoor
-        CALL buttonlight    
+        CALL buttonlight   
     END SEQUENCE
         
     SEQUENCE getNextFloor RETURNING nextFloor, steps
@@ -333,6 +333,12 @@ END SEQUENCE
                 END FOR EACH
             END IF
         END FOR EACH
+    END SEQUENCE
+
+    SEQUENCE updateState
+        IF isTasks IS false THEN SET state EQUAL isIdle
+        ELSE SET state EQUAL moving 
+        END IF
     END SEQUENCE
 
     SEQUENCE getNextTask
@@ -486,6 +492,7 @@ SEQUENCE closeDoor
 
     CALL elevator operate
     CALL elevator updateTasksList
+    CALL updateState
 END SEQUENCE
 
 
