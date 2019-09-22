@@ -503,7 +503,7 @@ SEQUENCE addRequestToTasksList
     SET isActive TO true
     SET bestElevator EQUAL CALL findBestElevator USING request RETURNING bestElevator
 
-    SET screen  EQUAL "elevator: " + id + " is " + elevator.state + "| floor: " +  elevator.currentFloor 
+    SET screen  EQUAL "elevator: " + id + " is " + elevator.state + "| floor: " +  elevator.currentFloor  " comming on column " + column columnID
 END SEQUENCE
 
 SEQUENCE buttonLightOn
