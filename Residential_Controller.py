@@ -381,7 +381,7 @@ def requestElevator(floor, direction):
 
 
 
-def resquestFloor(elevatorId, requestedFloor):
+def requestFloor(elevatorId, requestedFloor):
     for col in battery.columns:
         print('col: ' + str(col))
         for elevatorItem in col.elevators:
@@ -394,4 +394,4 @@ def resquestFloor(elevatorId, requestedFloor):
                 print('YOUR ELEVATOR IS MOVING TO THE REQUESTED FLOOR ' +  str(requestedFloor))
             #     break
 
-requestElevator(1, "up")
+requestFloor(1, 7);
