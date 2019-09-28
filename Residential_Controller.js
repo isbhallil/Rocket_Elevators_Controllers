@@ -121,7 +121,7 @@ class Column {
 
 
         this.elevators.forEach(elevator => {
-            if (elevator.tasksList == 0) idleElevators.push(elevator)
+            if (elevator.tasksList.length == 0) idleElevators.push(elevator)
             else if (elevator.isComming(request)) commingElevators.push(elevator)
             else othersElevators.push(elevator)
         });
@@ -156,12 +156,11 @@ class Column {
     getStepsToCome = (elevator, request) => {
         let direction = elevator.getDirection()
         let floor = request.requestedFloor
-        let idle = elevator.tasksList.length == 0
         let stepsToCome = 0
         let previousTask = elevator.currentFloor
 
          
-        if (idle) {
+        if ( elevator.tasksList.length == 0) {
             stepsToCome += Math.abs(previousTask - request.requestedFloor);
         } else {
             elevator.tasksList.some((task, index) => {
@@ -271,14 +270,16 @@ class Elevator {
         let elevatorDirection = this.getDirection()
         let isComming = false
 
+        debugger
+
         if (elevatorDirection == request.direction) {
             if (elevatorDirection == "up") {
                 isComming = this.tasksList.some(task => {
-                    if (task <= request.requestedFloor) return true
+                    if (this.currentFloor <= request.requestedFloor && this.currentFloor < task) return true
                 })
             } else if (elevatorDirection == "down") {
                 isComming = this.tasksList.some(task => {
-                    if (task >= request.requestedFloor) return true
+                    if (this.currentFloor<= request.requestedFloor && this.currentFloor < task) return true
                 })
             }
         }
@@ -372,8 +373,8 @@ const requestElevator = (floor, direction) => {
     let query = battery.getColumnButton(floor, direction)
     console.log(query)
 
-
-    query ? query.column.requestElevator(floor, direction) : console.log('the request you trying to make is not possible because only God can')
+    if (query) query.column.requestElevator(floor, direction)
+    else console.log('the request you trying to make is not possible because only God can')
 }
 
 const requestFloor = (elevator, requestedFloor) => {
@@ -388,260 +389,3 @@ const requestFloor = (elevator, requestedFloor) => {
     })
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const battery = {
-//     numberOfFloors: 60,
-//     numberOfColumns: 4,
-// }
-
-// const elevatorsList = [{
-//     column: 0,
-//     state: 'idle',
-//     currentFloor: 2,
-//     doorState: 'closed',
-//     isSafe: true,
-//     buttonsList: [],
-//     tasksList: []
-// }, {
-//     column: 0,
-//     state: 'moving',
-//     currentFloor: 10,
-//     doorState: 'closed',
-//     isSafe: true,
-//     buttonsList: [],
-//     tasksList: []
-// }]
-
-
-
-
-
-// // **************************************************************************
-
-// //    BATTERY
-
-// // **************************************************************************
-
-
-// class Battery {
-//     constructor(numberOfFloors, numberOfColumns) {
-//         this.columns = this.initColumns(numberOfFloors, numberOfColumns)
-
-//         console.log(`[Battery] | constructor using numberOfFLoor: ${numberOfFloors} and numberOfColumns: ${numberOfColumns}`)
-//     }
-
-//     initColumns = (numberOfFLoors, numberOfColumns) => {
-//         let range = Math.floor(numberOfFLoors / numberOfColumns);
-//         let columns = []
-
-//         let floor = 1
-//         let maxFloor = numberOfFLoors - floor
-//         for(; floor <= maxFloor; floor += range){
-//             let column = {
-//                 lowestFloorLevel: floor ,
-//                 highestFloorLevel: floor + range                
-//             }
-
-//             columns.push(new Column(Math.random, column));
-//             console.log(`[initColumns] | range: ${range}, floor: ${floor}`)
-//         }
-
-//         return columns
-//     };
-
-
-//     RequestElevator = (RequestedFloor, Direction, ) => {
-//         let request = new Request(RequestedFloor, Direction);
-//         console.log('floor requested');
-//     }
-// }
-
-
-
-
-
-// const elevators = [
-
-// ]
-
-
-
-
-
-// // **************************************************************************
-
-// //    COLUMN
-
-// // **************************************************************************
-
-// class Column {
-//     constructor(id, column) {
-//         this.id = id;
-//         this.floorsList = this.initFloors(column.lowestFloorLevel, column.highestFloorLevel)
-//         //this.elevatorsList = this.initElevators(column.elevatorsList)
-//         console.log(`new Column ${this.id}`)
-//     }
-
-//     initFloors = (lowest, highest) => {
-//         let floors = [];
-//         floors.push(new Floor(0, this.id));
-
-//         let i = lowest
-//         while (i <= highest) {
-//             floors.push(new Floor(i, this.id))
-//             i++
-//         }
-
-
-//         return floors
-//     }
-
-//     initElevators = (elevatorsList) => {
-//         let elevators = [];
-
-//         let i = 1
-//         const iMax = elevatorsList.length
-//         for (; i < iMax; i++) {
-//             elevators.push(new Elevator(elevatorsList[i]));
-//         }
-
-//         return elevators
-//     }
-
-// }
-
-
-
-
-
-
-
-
-
-
-// // **************************************************************************
-
-// //    FLOOR
-
-// // **************************************************************************
-
-// class Floor {
-//     constructor(floorNumber, columnId) {
-//         this.floorNumber = floorNumber;
-//         this.floorButtons = this.initFloorButtons(this.floorNumber, columnId)
-//         this.columnId = columnId
-//         this.requestsList = []
-
-//         console.log(`new Floor ${floorNumber} || on column ${this.columnId}`)
-//     }
-
-//     initFloorButtons = (floorNumber, columnId) => {
-//         const buttons = []
-
-//         if (floorNumber != battery.numberOfFloors) buttons.push(new FloorButton('up', floorNumber, columnId))
-//         if (this.floorNumber != 0) buttons.push(new FloorButton('down', floorNumber, columnId));
-
-//         return buttons
-//     }
-// }
-
-
-
-
-
-
-
-
-
-
-// // **************************************************************************
-
-// //    FLOOR BUTTON
-
-// // **************************************************************************
-
-// class FloorButton {
-//     constructor(direction, number, columnId) {
-//         this.floorNumber = number
-//         this.direction = direction
-//         this.columnId = columnId
-//         this.buttonsLight = false
-
-//         console.log(`new FloorButton | direction: ${this.direction}, floorNumber: ${this.floorNumber}, column: ${this.columnId}`)
-//     }
-
-//     requestElevator = () => {
-//         // let request = new ElevatorRequest(this.floorNumber, this.direction, this.columnId)
-
-//         // this.toggleLight();
-//         // this.request = request
-//     }
-
-//     toggleLight = () => {
-//         this.buttonsLight = !this.buttonsLight
-//     }
-// }
-
-
-// class Request {
-//     constructor(requestedFloor, direction, columnId) {
-//         this.requestedFloor = requestElevator
-//         this.direction = direction
-//         this.createdAt = Date.now()
-//         this.arrivedAt = null
-//         this.columnId = columnId
-//     }
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const b1 = new Battery(battery.numberOfFloors, battery.numberOfColumns)
