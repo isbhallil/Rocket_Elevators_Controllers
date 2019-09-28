@@ -109,6 +109,8 @@ class Column {
     requestElevator = (requestedFloor, direction) => {
         let elevatorRequest = new ElevatorRequest(requestedFloor, direction);
         let elevator = this.getBestElevator(elevatorRequest)
+
+        console.log("you're elevator is comming" , elevator)
         
         console.log(requestedFloor)
         elevator.addTask(requestedFloor);
