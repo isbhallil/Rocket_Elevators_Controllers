@@ -9,6 +9,9 @@ public class Main {
 
         // init number of columns by providing the number of elevators in each columns
         ArrayList<Integer> numberOfELevatorsPerColumn = new ArrayList<Integer>(Arrays.asList(5, 5, 5, 5));
+        
+        // init the test elevators
+        // IMPORTANT: if an elevator is idle, it can't be on floor 1
         (new Battery(85, numberOfELevatorsPerColumn))
                 .initTestElevator(0, 1, new ArrayList<Integer>(Arrays.asList(24)))
                 .initTestElevator(1, 23, new ArrayList<Integer>(Arrays.asList(28)))
@@ -250,7 +253,6 @@ class Elevator
 
     public boolean isComming(ElevatorRequest task)
     {
-        boolean isComming = false;
         String direction = this.getDirection();
 
         if (direction.equals(task.direction))
@@ -268,7 +270,6 @@ class Elevator
 
             else if (direction.equals("down"))
             {
-                boolean again = true;
                 for ( ElevatorTask taskItem : this.tasksList)
                 {
                     if (this.currentFloor >= taskItem.floor && this.currentFloor > taskItem.floor)

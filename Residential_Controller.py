@@ -191,7 +191,7 @@ class Column:
                 if direction == "up" and floor >= previousTask and floor <= nextTask:
                     stepsToCome = stepsToCome + abs(previousTask - floor);
                 elif direction == "down" and floor <= previousTask and floor >= nextTask:
-                    stepsToCome == stepsToCome + abs(previousTask - nextTask)
+                    stepsToCome = stepsToCome + abs(previousTask - nextTask)
                 else:
                     stepsToCome = stepsToCome + abs(previousTask - nextTask)
 
@@ -394,4 +394,5 @@ def requestFloor(elevatorId, requestedFloor):
                 print('YOUR ELEVATOR IS MOVING TO THE REQUESTED FLOOR ' +  str(requestedFloor))
             #     break
 
-requestFloor(1, 7);
+
+requestElevator( 1, " down");

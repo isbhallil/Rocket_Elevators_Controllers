@@ -92,7 +92,7 @@ SEQUENCE getStepsToTravel USING elevator, request RETURNING steps
                 RETURN stepsToCome + CALL getAbsoluteDifference WITH request floor, task origin
             ELSE
                 SET currentSteps EQUAL CALL getAbsoluteDifference WITH task.floor, elevator.currentFloor
-                SET stepsToCome EQUAL steps + currentSteps
+                SET stepsToCome EQUAL stepsToCome + currentSteps
             END IF
         END FOR
 

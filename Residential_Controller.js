@@ -212,7 +212,6 @@ class FloorButton {
         this.columnId = columnId
         this.floorNumber = number
         this.direction = direction
-        this.columnId = columnId
         this.buttonsLight = false
     }
 
