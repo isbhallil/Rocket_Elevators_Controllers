@@ -23,8 +23,8 @@ type Battery struct {
 func (b *Battery) requestElevator(floorNumber, target int, direction string) *Elevator{
 	c := b.getRequestedColumn(floorNumber, target)
 	e := c.getBestElevator(floorNumber, direction)
-	e.assignElevator(floorNumber)
-	e.assignElevator(target)
+	go e.assignElevator(floorNumber)
+	go e.assignElevator(target)
 	
 	return e
 }
@@ -125,13 +125,18 @@ func (c*Column) getBestElevator(floor int, direction string) (*Elevator){
 		}
 	}
 
-	if (len(commingElevators) > 0) {
-		return c.getBestElevatorFrom(commingElevators, floor, direction);
-	} else if (len(idlingElevators) > 0) {
-		return c.getBestElevatorFrom(idlingElevators, floor, direction);
+	return c.selectElevator(commingElevators, idlingElevators, otherElevators, floor, direction)
+}
+
+// return the best elevator from list according to priority
+func (c *Column)selectElevator(priority1, priority2, priority3 []*Elevator , floor int, direction string ) *Elevator{
+	if (len(priority1) > 0) {
+		return c.getBestElevatorFrom(priority1, floor, direction);
+	} else if (len(priority2) > 0) {
+		return c.getBestElevatorFrom(priority2, floor, direction);
 	} 
 
-	return c.getBestElevatorFrom(otherElevators, floor, direction);
+	return c.getBestElevatorFrom(priority3, floor, direction);
 }
 
 // draw between elevators to select the best fit in the list
@@ -229,7 +234,7 @@ func (e*Elevator) getGapToReach(floor int, direction string) int {
 
 	}
 
-	return gapToReach
+	return gapToReach + abs(previousReach - floor)
 }
 
 // return if elevator is reaching the request or will be able to reach
@@ -280,9 +285,9 @@ func (e *Elevator) operate() *Elevator{
 
 // decide witch way to move
 func (e *Elevator) move() *Elevator{
-	if ( e.isMovingUp() ){
+	if ( e.isNextTaskAbove() ){
 		e.moveUp()
-	} else if ( e.isMovingDown() ) {
+	} else if ( e.isNextTaskBeneath() ) {
 		e.moveDown()
 	}
 
@@ -321,7 +326,7 @@ func arrange(slice []int, order string) {
 func (e *Elevator) removeTask() *Elevator{
 	e.tasksList = e.tasksList[1:]
 	return e
-}
+} 
 
 // return true if the elevator is at a requested floor
 func (e *Elevator) isArrived() bool {
@@ -329,12 +334,12 @@ func (e *Elevator) isArrived() bool {
 }
 
 // return true if the nest floor to visit is above the elevator
-func (e *Elevator) isMovingUp() bool {
+func (e *Elevator) isNextTaskAbove() bool {
 	return e.currentFloor < e.tasksList[0]
 }
 
 // return true if the nest floor to visit is beneathe the elevator
-func (e *Elevator) isMovingDown() bool {
+func (e *Elevator) isNextTaskBeneath() bool {
 	return e.currentFloor > e.tasksList[0]
 }
 
@@ -508,15 +513,15 @@ func main() {
 	b := newBattery(85, numberOfElevatorsPerColumn)
 	
 	w := []TestElevator {
-		b.newTestElevator(0, 22, []int{5}),
-		b.newTestElevator(1, 3, []int{15}),
-		b.newTestElevator(2, 13, []int{1}),
-		b.newTestElevator(3, 15, []int{2}),
-		b.newTestElevator(4, 6, []int{1}),
+		b.newTestElevator(0, 45, []int{1}),
+		b.newTestElevator(1, 2, []int{45}),
+		b.newTestElevator(2, 55, []int{61}),
+		b.newTestElevator(3, 50, []int{1}),
+		b.newTestElevator(4, 63, []int{46}),
 	}
 	
 	b.initTest(w, numberOfElevatorsPerColumn)
-	b.requestElevator(1, 20, "up")
+	b.requestElevator(1, 64, "up")
 
 	
 
