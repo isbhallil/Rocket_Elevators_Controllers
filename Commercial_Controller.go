@@ -278,7 +278,6 @@ func (e *Elevator) operate() *Elevator{
 			time.Sleep(1000)
 			e.closeDoor()
 		}
-	}
 
 	return e
 }
@@ -297,12 +296,6 @@ func (e *Elevator) move() *Elevator{
 // add a floor to the task list
 func (e *Elevator) addTask(floor int) *Elevator{
 	e.tasksList = append(e.tasksList, floor)
-
-	if (e.getDirection() == "down") {
-		arrange(e.tasksList, "DESC")
-	} else {
-		arrange(e.tasksList, "ASC")
-	}
 
 	return e
 }
@@ -330,7 +323,12 @@ func (e *Elevator) removeTask() *Elevator{
 
 // return true if the elevator is at a requested floor
 func (e *Elevator) isArrived() bool {
-	return e.currentFloor == e.tasksList[0]
+	for _, floor := range e.tasksList {
+		if e.currentFloor == floor {
+			return true
+		}
+	}
+	return false
 }
 
 // return true if the nest floor to visit is above the elevator
