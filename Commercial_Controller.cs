@@ -321,7 +321,7 @@ namespace Commercial_Controller
 
             Console.WriteLine("Elevator " + id + " have next step as " + previousTask);
             Console.WriteLine("Elevator " + id + " gonna do " + stepsToCome + " to reach " + task.floor);
-            return stepsToCome;
+            return stepsToCome + abs( previousTask - task.floor);
         }
         public string getDirection()
         {
